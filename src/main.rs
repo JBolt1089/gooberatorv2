@@ -12,5 +12,6 @@ fn main() {
         return;
     }
 
-    let machine = machine::Machine::new(&args[1], &args[2]);
+    let mut machine = machine::Machine::new(&args[1], &args[2]);
+    machine.start();
 }

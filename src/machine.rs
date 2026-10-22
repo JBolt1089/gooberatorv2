@@ -12,4 +12,10 @@ impl Machine {
             cpu: cpu::Cpu::new(program_path, defs_path),
         }
     }
+
+    pub fn start(&mut self) {
+        while !self.cpu.stopped {
+            self.cpu.exec_next(&mut self.memory);
+        }
+    }
 }
