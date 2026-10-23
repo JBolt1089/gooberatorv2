@@ -7,14 +7,14 @@ pub struct Memory {
 
 impl Memory {
     pub fn new() -> Self {
-        return Self {
+        Self {
             ram: [0; U16_POSSIBLE_VALUES as usize],
             stack: Vec::new(),
-        };
+        }
     }
 
     pub fn get_ram(&self, address: u16) -> u16 {
-        return self.ram[address as usize];
+        self.ram[address as usize]
     }
 
     pub fn set_ram(&mut self, address: u16, value: u16) {
@@ -27,20 +27,17 @@ impl Memory {
 
     pub fn pop_stack(&mut self) -> u16 {
         match self.stack.pop() {
-            Some(val) => {
-                return val;
-            }
+            Some(val) => val,
             None => {
-                return 0; /* add error handling later, im lazy :3 */
+                eprintln!("stack is empty and you tried to get something from it you idiot");
+                std::process::exit(69);
             }
         }
     }
 
     pub fn get_stack_top(&self) -> u16 {
         match self.stack.last() {
-            Some(val) => {
-                return val.to_owned();
-            }
+            Some(val) => val.to_owned(),
             None => {
                 eprintln!("stack is empty and you tried to get something from it you idiot");
                 std::process::exit(69420);
