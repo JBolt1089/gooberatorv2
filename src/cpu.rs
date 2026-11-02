@@ -127,6 +127,33 @@ impl Cpu {
         }
     }
 
+    pub fn get_from_arg(&self, str: &str, mem: &Memory) -> u16 {
+        match str.to_lowercase() {
+            s if s.starts_with("a_") => mem.get_ram(parse_num_arg(s.strip_prefix("a_").unwrap())),
+            s if s.starts_with("r_") => self.reg_from_string(s.strip_prefix("r_").unwrap()),
+            s if s.starts_with("i_") => parse_num_arg(str.strip_prefix("i_").unwrap()),
+            _ => {
+                eprintln!("prefix could not be matched! pc is {}", self.reg_pc);
+                std::process::exit(69);
+            }
+        }
+    }
+
+    pub fn set_from_arg(&mut self, str: &str, mem: &mut Memory, value: u16) {
+        match str.to_lowercase() {
+            s if s.starts_with("a_") => {
+                mem.set_ram(parse_num_arg(str.strip_prefix("a_").unwrap()), value)
+            }
+            s if s.starts_with("r_") => {
+                self.set_reg_from_string(str.strip_prefix("r_").unwrap(), value);
+            }
+            _ => {
+                eprintln!("prefix could not be matched! pc is {}", self.reg_pc);
+                std::process::exit(69);
+            }
+        }
+    }
+
     pub fn exec_next(&mut self, memory: &mut Memory) {
         let line = self.program[self.reg_pc as usize].clone();
         let args: Vec<&str> = line.split_whitespace().collect();
@@ -136,32 +163,24 @@ impl Cpu {
                 self.printhi();
                 true
             }
-            "li" => {
-                self.li(args);
-                true
-            }
             "prab" => {
                 self.prab(args);
                 true
             }
-            "ld" => {
-                self.ld(args, memory);
-                true
-            }
-            "str" => {
-                self.str(args, memory);
+            "mov" => {
+                self.mov(args, memory);
                 true
             }
             "and" => {
-                self.and(args);
+                self.and(args, memory);
                 true
             }
             "or" => {
-                self.or(args);
+                self.or(args, memory);
                 true
             }
             "xor" => {
-                self.xor(args);
+                self.xor(args, memory);
                 true
             }
             "push" => {
@@ -177,19 +196,19 @@ impl Cpu {
                 true
             }
             "add" => {
-                self.add(args);
+                self.add(args, memory);
                 true
             }
             "sub" => {
-                self.sub(args);
+                self.sub(args, memory);
                 true
             }
             "call" => {
                 self.call(args, memory);
                 false
             }
-            "jz" => self.jz(args),
-            "jnz" => self.jnz(args),
+            "jz" => self.jz(args, memory),
+            "jnz" => self.jnz(args, memory),
             "ret" => {
                 self.ret(memory);
                 true
@@ -215,11 +234,6 @@ impl Cpu {
         println!("hi");
     }
 
-    pub fn li(&mut self, args: Vec<&str>) {
-        check_args!(args.len(), 3, self.reg_pc);
-        self.set_reg_from_string(args[1], parse_num_arg(args[2]));
-    }
-
     pub fn prab(&self, args: Vec<&str>) {
         check_args!(args.len(), 2, self.reg_pc);
         println!("{:#b}", self.reg_from_string(args[1]));
@@ -229,89 +243,85 @@ impl Cpu {
         self.stopped = true;
     }
 
-    pub fn ld(&mut self, args: Vec<&str>, memory: &Memory) {
+    pub fn mov(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 3, self.reg_pc);
-        let val = memory.get_ram(parse_num_arg(args[2]));
-        self.set_reg_from_string(args[1], val);
+        let val = self.get_from_arg(args[2], memory);
+        self.set_from_arg(args[1], memory, val);
     }
 
-    pub fn str(&self, args: Vec<&str>, memory: &mut Memory) {
-        check_args!(args.len(), 3, self.reg_pc);
-        let val = self.reg_from_string(args[1]);
-        memory.set_ram(parse_num_arg(args[2]), val);
-    }
-
-    pub fn and(&mut self, args: Vec<&str>) {
+    pub fn and(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 4, self.reg_pc);
-        let result = self.reg_from_string(args[1]) & self.reg_from_string(args[2]);
-        self.set_reg_from_string(args[3], result);
+        let result = self.get_from_arg(args[1], memory) & self.get_from_arg(args[2], memory);
+        self.set_from_arg(args[3], memory, result);
     }
 
-    pub fn or(&mut self, args: Vec<&str>) {
+    pub fn or(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 4, self.reg_pc);
-        let result = self.reg_from_string(args[1]) | self.reg_from_string(args[2]);
-        self.set_reg_from_string(args[3], result);
+        let result = self.get_from_arg(args[1], memory) | self.get_from_arg(args[2], memory);
+        self.set_from_arg(args[3], memory, result);
     }
 
-    pub fn xor(&mut self, args: Vec<&str>) {
+    pub fn xor(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 4, self.reg_pc);
-        let result = self.reg_from_string(args[1]) ^ self.reg_from_string(args[2]);
-        self.set_reg_from_string(args[3], result);
+        let result = self.get_from_arg(args[1], memory) ^ self.get_from_arg(args[2], memory);
+        self.set_from_arg(args[3], memory, result);
     }
 
     pub fn push(&self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 2, self.reg_pc);
-        memory.push_stack(self.reg_from_string(args[1]));
+        memory.push_stack(self.get_from_arg(args[1], memory));
     }
 
     pub fn pop(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 2, self.reg_pc);
-        self.set_reg_from_string(args[1], memory.pop_stack());
+        let value = memory.pop_stack();
+        self.set_from_arg(args[1], memory, value);
     }
 
-    pub fn gstk(&mut self, args: Vec<&str>, memory: &Memory) {
+    pub fn gstk(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 2, self.reg_pc);
-        self.set_reg_from_string(args[1], memory.get_stack_top());
+        let value = memory.get_stack_top();
+        self.set_from_arg(args[1], memory, value);
     }
 
-    pub fn add(&mut self, args: Vec<&str>) {
+    pub fn add(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 4, self.reg_pc);
-        let result = self.reg_from_string(args[1]) + self.reg_from_string(args[2]);
-        self.set_reg_from_string(args[3], result);
+        let result = self.get_from_arg(args[1], memory) + self.get_from_arg(args[2], memory);
+        self.set_from_arg(args[3], memory, result);
     }
 
-    pub fn sub(&mut self, args: Vec<&str>) {
+    pub fn sub(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 4, self.reg_pc);
-        let result = self.reg_from_string(args[1]) - self.reg_from_string(args[2]);
-        self.set_reg_from_string(args[3], result);
+        let result = self.get_from_arg(args[1], memory) - self.get_from_arg(args[2], memory);
+        self.set_from_arg(args[3], memory, result);
     }
 
     pub fn call(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 2, self.reg_pc);
-        let address = parse_num_arg(args[1]);
+        let address = self.get_from_arg(args[1], memory);
         memory.push_stack(self.reg_pc);
         self.reg_pc = address;
     }
 
-    pub fn jz(&mut self, args: Vec<&str>) -> bool {
+    pub fn jz(&mut self, args: Vec<&str>, memory: &Memory) -> bool {
         check_args!(args.len(), 3, self.reg_pc);
-        let val = self.reg_from_string(args[1]);
+        let val = self.get_from_arg(args[1], memory);
         match val {
             0 => {
-                self.reg_pc = parse_num_arg(args[2]);
+                self.reg_pc = self.get_from_arg(args[2], memory);
                 false
             }
             _ => true,
         }
     }
 
-    pub fn jnz(&mut self, args: Vec<&str>) -> bool {
+    pub fn jnz(&mut self, args: Vec<&str>, memory: &Memory) -> bool {
         check_args!(args.len(), 3, self.reg_pc);
-        let val = self.reg_from_string(args[1]);
+        let val = self.get_from_arg(args[1], memory);
         match val {
             0 => true,
             _ => {
-                self.reg_pc = parse_num_arg(args[2]);
+                self.reg_pc = self.get_from_arg(args[2], memory);
                 false
             }
         }
