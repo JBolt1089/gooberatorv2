@@ -1,4 +1,5 @@
 use std::{
+    collections::VecDeque,
     fs::File,
     io::{self, BufRead},
     path::Path,
@@ -163,12 +164,20 @@ impl Cpu {
                 self.printhi();
                 true
             }
-            "prab" => {
-                self.prab(args);
+            "prnb" => {
+                self.prnb(args, memory);
+                true
+            }
+            "prnc" => {
+                self.prnc(args, memory);
                 true
             }
             "mov" => {
                 self.mov(args, memory);
+                true
+            }
+            "wbtm" => {
+                self.wbtm(args, memory);
                 true
             }
             "and" => {
@@ -234,9 +243,15 @@ impl Cpu {
         println!("hi");
     }
 
-    pub fn prab(&self, args: Vec<&str>) {
+    pub fn prnb(&self, args: Vec<&str>, memory: &Memory) {
         check_args!(args.len(), 2, self.reg_pc);
-        println!("{:#b}", self.reg_from_string(args[1]));
+        println!("{:#b}", self.get_from_arg(args[1], memory));
+    }
+
+    pub fn prnc(&self, args: Vec<&str>, memory: &Memory) {
+        check_args!(args.len(), 2, self.reg_pc);
+        let c = self.get_from_arg(args[1], memory);
+        print!("{}", c as u8 as char);
     }
 
     pub fn end(&mut self) {
@@ -245,8 +260,19 @@ impl Cpu {
 
     pub fn mov(&mut self, args: Vec<&str>, memory: &mut Memory) {
         check_args!(args.len(), 3, self.reg_pc);
-        let val = self.get_from_arg(args[2], memory);
-        self.set_from_arg(args[1], memory, val);
+        let val = self.get_from_arg(args[1], memory);
+        self.set_from_arg(args[2], memory, val);
+    }
+
+    pub fn wbtm(&mut self, args: Vec<&str>, memory: &mut Memory) {
+        let mut args2 = VecDeque::from(args);
+        args2.pop_front();
+        let mut address = self.get_from_arg(args2.pop_front().unwrap(), memory);
+        while !args2.is_empty() {
+            let val = self.get_from_arg(args2.pop_front().unwrap(), memory);
+            memory.set_ram(address, val);
+            address += 1;
+        }
     }
 
     pub fn and(&mut self, args: Vec<&str>, memory: &mut Memory) {
