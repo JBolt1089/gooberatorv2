@@ -15,3 +15,8 @@ fn main() {
     let mut machine = machine::Machine::new(&args[1], &args[2]);
     machine.start();
 }
+
+#[cfg(test)]
+mod tests {
+    pub mod memory_tests;
+}
