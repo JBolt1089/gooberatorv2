@@ -6,6 +6,7 @@ pub mod macros;
 pub mod math;
 pub mod other;
 pub mod printing;
+pub mod comparison;
 
 #[path = "cpu/memory.rs"]
 pub mod memory_instructions;
@@ -18,6 +19,24 @@ use std::{
 };
 
 use crate::memory::Memory;
+
+#[derive(Clone)]
+pub struct Cpu {
+    pub reg_pc: u16,
+    pub reg_a: u16,
+    pub reg_b: u16,
+    pub reg_c: u16,
+
+    pub program: Vec<String>,
+    pub stopped: bool,
+}
+
+pub enum Register {
+    PC,
+    A,
+    B,
+    C,
+}
 
 fn read(path: impl AsRef<Path>) -> io::Result<Vec<String>> {
     io::BufReader::new(File::open(path)?).lines().collect()
@@ -48,24 +67,6 @@ fn parse_num_arg(str: &str) -> u16 {
             std::process::exit(69);
         }
     }
-}
-
-#[derive(Clone)]
-pub struct Cpu {
-    pub reg_pc: u16,
-    pub reg_a: u16,
-    pub reg_b: u16,
-    pub reg_c: u16,
-
-    pub program: Vec<String>,
-    pub stopped: bool,
-}
-
-pub enum Register {
-    PC,
-    A,
-    B,
-    C,
 }
 
 impl Cpu {

@@ -72,6 +72,22 @@ impl Cpu {
                 self.ret(memory);
                 true
             }
+            "gthan" => {
+                self.gthan(args, memory);
+                true
+            }
+	    "lthan" => {
+		self.lthan(args, memory);
+		true
+	    }
+	    "gteq" => {
+		self.greater_equal(args, memory);
+		true
+	    }
+	    "lteq" => {
+		self.less_equal(args, memory);
+		true
+	    }
             "end" => {
                 self.end();
                 false

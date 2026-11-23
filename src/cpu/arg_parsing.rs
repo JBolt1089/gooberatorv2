@@ -37,6 +37,9 @@ impl Cpu {
             s if s.starts_with("a_") => mem.get_ram(parse_num_arg(s.strip_prefix("a_").unwrap())),
             s if s.starts_with("r_") => self.reg_from_string(s.strip_prefix("r_").unwrap()),
             s if s.starts_with("i_") => parse_num_arg(str.strip_prefix("i_").unwrap()),
+            s if s.starts_with("p_") => {
+                mem.get_ram(mem.get_ram(parse_num_arg(s.strip_prefix("p_").unwrap())))
+            }
             _ => {
                 eprintln!("prefix could not be matched! pc is {}", self.reg_pc);
                 std::process::exit(69);
@@ -51,6 +54,10 @@ impl Cpu {
             }
             s if s.starts_with("r_") => {
                 self.set_reg_from_string(str.strip_prefix("r_").unwrap(), value);
+            }
+            s if s.starts_with("p_") => {
+                let address = mem.get_ram(parse_num_arg(s.strip_prefix("p_").unwrap()));
+                mem.set_ram(address, value);
             }
             _ => {
                 eprintln!("prefix could not be matched! pc is {}", self.reg_pc);
